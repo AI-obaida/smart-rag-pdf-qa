@@ -1,0 +1,35 @@
+__pycache__/
+instance/
+.env
+*.pyc
+uploads/
+.vscode/
+.ipynb_checkpoints/
+.pytest_cache/
+.coverage
+*.sqlite
+.DS_Store
+.env.*
+!.env.example
+.venv/
+
+# Local backups and experiments
+project_backups/
+indexing_backups/
+_proposal_test_fixed*/
+rag_phase1_proposal.fixed*.json
+requirements_check_fixed*.txt
+*.bak
+
+# Local evaluation outputs
+Smart_RAG_Accuracy_Evaluation_Template.csv
+Smart_RAG_Accuracy_Observed_Responses.csv
+run_smart_rag_accuracy.py
+
+# Local experimental artifacts
+Dockerfile.rag-pytest
+Modelfile.qwen3-rag-test
+rag_complete_source_test.pdf
+rag_multipage_test.pdf
+rag_phase1_proposal.json
+rag_phase1_proposal.reviewed.json
