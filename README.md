@@ -5,7 +5,61 @@
 Smart RAG PDF QA is a Flask-based web application that allows users to upload PDF documents, process and index their contents, and ask natural-language questions. The system uses retrieval-augmented generation (RAG) to produce source-grounded answers with document and page references.
 
 The application supports English and Arabic questions. Answers are generated using a locally hosted language model through Ollama.
+## Problem Statement
 
+Students, researchers, and professionals often need to find specific information within long PDF documents. Manually searching these documents can be time-consuming, especially when information is distributed across multiple pages.
+
+General-purpose AI systems may also provide answers without verifiable sources, making it difficult for users to confirm their accuracy.
+
+Smart RAG PDF QA addresses this problem by helping users retrieve information from their own documents and verify answers using document and page references.
+
+## Proposed Solution
+
+Smart RAG PDF QA is a web-based platform that allows users to upload PDF documents and ask natural-language questions in English or Arabic.
+
+The system extracts text from PDFs, preserves page numbers, divides the text into chunks, and generates multilingual vector embeddings. These embeddings are stored in PostgreSQL using pgvector.
+
+When a user submits a question, the application retrieves relevant document passages and sends the retrieved context to a locally hosted language model through Ollama.
+
+The system also applies relevance and citation validation checks to reduce unsupported answers.
+
+Retrieval-Augmented Generation (RAG) was selected because it combines semantic search with natural-language generation while allowing answers to reference the original documents.
+
+## Project Structure
+
+```text
+smart_rag_pdf_qa/
+|-- app/
+|   |-- endpoints/       # Flask API endpoints
+|   |-- frontend/        # Web interface
+|   |-- services/        # PDF processing, retrieval and AI logic
+|   |-- config.py        # Application configuration
+|   |-- models.py        # Database models
+|   `-- __init__.py      # Flask application initialization
+|-- tests/               # Automated tests
+|-- Documentation/       # Performance evaluation report
+|-- Evaluation/          # Accuracy testing and CSV results
+|-- Presentation/        # Final presentation
+|-- .env.example         # Example environment configuration
+|-- .gitignore           # Git exclusions
+|-- requirements.txt     # Python dependencies
+|-- schema.sql           # Database schema
+|-- run.py               # Application entry point
+`-- README.md            # Project documentation
+```
+
+The project separates API endpoints, application services, AI processing, and database-related functionality to improve maintainability and testing.
+
+## Clone the Repository
+
+Clone the project from GitHub:
+
+```powershell
+git clone https://github.com/AI-obaida/smart-rag-pdf-qa.git
+Set-Location smart-rag-pdf-qa
+```
+
+After cloning, follow the prerequisites and Windows setup instructions below.
 ## Main Features
 
 - PDF upload and validation
