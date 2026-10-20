@@ -18,7 +18,13 @@ class ModalityDecisionResolver:
         "negation_conflict",
     }
 
-    def resolve(self, modality_result, conflict_result):
+    def resolve(
+        self,
+        modality_result,
+        conflict_result,
+        source_features=None,
+        fact_features=None,
+    ):
         if not isinstance(modality_result, dict):
             raise TypeError("modality_result must be a dict")
 
@@ -62,6 +68,38 @@ class ModalityDecisionResolver:
         else:
             verdict = modality_verdict
             reason = modality_reason
+
+        if source_features is not None or fact_features is not None:
+            if not isinstance(source_features, dict):
+                raise TypeError("source_features must be a dict")
+
+            if not isinstance(fact_features, dict):
+                raise TypeError("fact_features must be a dict")
+
+            source_modality = source_features.get("modality")
+            fact_modality = fact_features.get("modality")
+
+            if (
+                type(source_features.get("negated")) is bool
+                and type(fact_features.get("negated")) is bool
+                and source_features["negated"] != fact_features["negated"]
+            ):
+                verdict = "REJECT"
+                reason = "negation_conflict"
+
+            elif (
+                source_modality == "SHOULD"
+                and fact_modality == "MUST"
+            ):
+                verdict = "REJECT"
+                reason = "mandatory_overstatement"
+
+            elif (
+                source_features.get("conditional") is True
+                and fact_features.get("conditional") is False
+            ):
+                verdict = "REJECT"
+                reason = "missing_source_condition"
 
         return {
             "verdict": verdict,

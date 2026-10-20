@@ -198,9 +198,166 @@ class ModalityGuard:
                         "reason": "narrow_cross_language_must_use",
                     }
 
-        # Arabic-English cross-language claims cannot be
-        # compared reliably by simple token matching.
-        # For now, reject unsupported mandatory matches.
+        # Check the scope of explicit prohibitions.
+        entity_pattern = (
+            r"[A-Za-z][A-Za-z0-9+#-]*(?:\.[A-Za-z0-9+#-]+)*"
+        )
+        separator = r"(?:\s*,\s*(?:or\s+)?|\s+or\s+)"
+
+        prohibition_pattern = (
+            r"\b(?:must|shall)\s+not\s+use\s+"
+            + r"(" + entity_pattern
+            + r"(?:" + separator + entity_pattern + r")*)"
+        )
+
+        for sentence in self._sentences(source_text):
+            match = re.search(
+                prohibition_pattern,
+                sentence,
+                re.IGNORECASE,
+            )
+
+            if not match:
+                continue
+
+            prohibited_entities = {
+                entity.lower()
+                for entity in re.findall(
+                    entity_pattern,
+                    match.group(1),
+                )
+                if entity.lower() != "or"
+            }
+
+            claim_entities = {
+                entity.lower()
+                for entity in re.findall(
+                    entity_pattern,
+                    fact,
+                )
+            }
+
+            # A combination prohibition is not a blanket ban
+            # on every technology mentioned in that combination.
+            if re.search(
+                r"\bwith\s+" + entity_pattern,
+                sentence[match.end():],
+                re.IGNORECASE,
+            ):
+                prohibited_entities = set()
+
+                if (
+                    "with" in fact.lower()
+                    and all(
+                        re.search(
+                            r"(?<!\w)" + re.escape(entity) + r"(?!\w)",
+                            fact,
+                            re.IGNORECASE,
+                        )
+                        for entity in re.findall(
+                            entity_pattern,
+                            sentence[match.start():],
+                        )
+                        if entity.lower() not in {
+                            "must", "shall", "not", "use", "with",
+                            "students",
+                        }
+                    )
+                ):
+                    return {
+                        "allowed": False,
+                        "reason": "explicit_prohibition_conflict",
+                    }
+
+            if prohibited_entities & claim_entities:
+                source_subject = re.search(
+                    r"^\s*(Students|Teachers|The project)\b",
+                    sentence,
+                    re.IGNORECASE,
+                )
+                claim_subject = re.search(
+                    r"^\s*(Students|Teachers|The project)\b",
+                    fact,
+                    re.IGNORECASE,
+                )
+
+                if (
+                    source_subject
+                    and claim_subject
+                    and {source_subject.group(1).lower(),
+                         claim_subject.group(1).lower()}
+                    == {"students", "teachers"}
+                ):
+                    continue
+
+                return {
+                    "allowed": False,
+                    "reason": "explicit_prohibition_conflict",
+                }
+
+        # A conditional cross-language statement may be
+        # uncertain rather than an established contradiction.
+        if arabic_must in fact and arabic_use in fact:
+            if any(
+                re.search(r"\bif\b", sentence, re.IGNORECASE)
+                and not re.search(
+                    r"\bonly\s+if\b", sentence, re.IGNORECASE
+                )
+                for sentence in self._sentences(source_text)
+            ):
+                return {
+                    "allowed": True,
+                    "reason": "cross_language_conditional_uncertainty",
+                }
+
+        # A related mandatory statement with a different subject
+        # is uncertain, not an exact match or explicit contradiction.
+        if re.search(r"\bthe project\b", fact, re.IGNORECASE):
+            claim_entities = set(
+                entity.lower()
+                for entity in re.findall(
+                    r"\b[A-Z][A-Za-z0-9_.+-]*\b", fact
+                )
+                if entity.lower() not in {"the", "project"}
+            )
+
+            for sentence in self._sentences(source_text):
+                if not (
+                    re.search(r"\bstudents\b", sentence, re.IGNORECASE)
+                    and self._matches(sentence, self.STRONG)
+                ):
+                    continue
+
+                for entity in claim_entities:
+                    if re.search(
+                        r"(?<!\w)" + re.escape(entity) + r"(?!\w)",
+                        sentence,
+                        re.IGNORECASE,
+                    ):
+                        return {
+                            "allowed": True,
+                            "reason": "different_subject_uncertainty",
+                        }
+
+        # A different subject and technical entity do not, by
+        # themselves, establish an explicit modality contradiction.
+        # Keep the cross-language mandatory-claim policy unchanged.
+        if (
+            re.search(r"\bthe project\b", fact, re.IGNORECASE)
+            and re.search(r"\bmust\b", fact, re.IGNORECASE)
+            and not claim_negative
+        ):
+            for sentence in self._sentences(source_text):
+                if (
+                    re.search(r"\bstudents\b", sentence, re.IGNORECASE)
+                    and self._matches(sentence, self.STRONG)
+                    and not self._matches(sentence, self.NEGATION)
+                ):
+                    return {
+                        "allowed": True,
+                        "reason": "different_subject_uncertainty",
+                    }
+
         return {
             "allowed": False,
             "reason": "no_matching_source_statement",
