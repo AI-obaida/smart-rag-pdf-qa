@@ -57,6 +57,38 @@ class StructuredRAGService:
 
 
 
+    @staticmethod
+    def _translation_preserves_known_terms(question, translation):
+        if (
+            not isinstance(question, str)
+            or not isinstance(translation, str)
+            or not question.strip()
+            or not translation.strip()
+        ):
+            return False
+
+        q = question.casefold()
+        t = translation.casefold()
+
+        anchors = [
+            ("\u0627\u0644\u062a\u0639\u0644\u0645 \u0627\u0644\u0622\u0644\u064a", ("machine learning",)),
+            ("\u0627\u0644\u062a\u0639\u0644\u0645 \u0627\u0644\u0639\u0645\u064a\u0642", ("deep learning",)),
+            ("\u0627\u0633\u062a\u062e\u0631\u0627\u062c \u0627\u0644\u062e\u0635\u0627\u0626\u0635", ("feature extraction", "features")),
+            ("\u0627\u0644\u062a\u0635\u0646\u064a\u0641", ("classification", "classify")),
+            ("\u0627\u0644\u0645\u0647\u0646\u062f\u0633 \u0627\u0644\u0645\u062f\u0646\u064a", ("civil engineer",)),
+            ("\u0627\u0644\u0645\u0647\u0646\u062f\u0633 \u0627\u0644\u0625\u0646\u0634\u0627\u0626\u064a", ("structural engineer",)),
+        ]
+
+        required = [
+            alternatives for arabic, alternatives in anchors
+            if arabic in q
+        ]
+
+        return all(
+            any(term in t for term in alternatives)
+            for alternatives in required
+        )
+
     def _technical_entities_supported(self, fact, source_text):
         guard = TechnicalEntityGuard()
 
@@ -339,8 +371,10 @@ class StructuredRAGService:
         if re.search(r"[\u0600-\u06FF]", question):
             try:
                 translated = SearchQueryTranslator().translate(question)
-                if translated and not re.search(
-                    r"[\u0600-\u06FF]", translated
+                if (
+                    translated
+                    and not re.search(r"[\u0600-\u06FF]", translated)
+                    and self._translation_preserves_known_terms(question, translated)
                 ):
                     search_question = translated
             except (ConnectionError, TimeoutError, ValueError, OSError):
