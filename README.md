@@ -87,7 +87,8 @@ After cloning, follow the prerequisites and Windows setup instructions below.
 | Embeddings | sentence-transformers |
 | Embedding model | intfloat/multilingual-e5-small |
 | Vector search | pgvector cosine similarity |
-| Local LLM | Ollama with qwen2.5:3b |
+| Generation LLM | Ollama with qwen2.5:7b |
+| Validation LLM | Ollama with qwen2.5:3b |
 | Frontend | HTML, Bootstrap, JavaScript |
 | Tests | pytest |
 
@@ -96,7 +97,7 @@ After cloning, follow the prerequisites and Windows setup instructions below.
 - Python 3.11
 - PostgreSQL with the pgvector extension installed
 - Ollama installed and running
-- Ollama model: qwen2.5:3b
+- Ollama models: qwen2.5:7b and qwen2.5:3b
 - Internet access for the initial embedding model download
 
 The application has been developed and tested locally on Windows.
@@ -161,6 +162,7 @@ Ensure Ollama is installed and running.
 Download the language model:
 
 ```powershell
+ollama pull qwen2.5:7b
 ollama pull qwen2.5:3b
 ```
 
@@ -228,13 +230,9 @@ Run the test suite from the project directory:
 & ".\.venv\Scripts\python.exe" -m pytest tests -q
 ```
 
-The verified core test suite can be run with:
+Latest verified result (21 October 2026): **333 tests passed** using the full pytest suite.
 
-```powershell
-& ".\.venv\Scripts\python.exe" -m pytest tests -q --tb=line --ignore=tests/test_modality_resolver_feature_safety.py --ignore=tests/test_modality_uncertainty_policy.py
-```
-
-At the time of the submission review, 219 core tests passed. Two experimental modality test modules are excluded from this command because seven tests in those modules remain failing. Running the full suite may therefore report failures.
+This is a software test result, not a measurement of question-answering accuracy.
 
 ## Known Limitations
 

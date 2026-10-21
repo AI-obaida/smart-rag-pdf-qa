@@ -1,4 +1,5 @@
-﻿import json
+import json
+import re
 import urllib.request
 
 
@@ -49,6 +50,9 @@ class CitationEntailmentValidator:
             "SUPPORTED: SOURCE establishes the entire CLAIM.\n"
             "CONTRADICTED: SOURCE explicitly conflicts with CLAIM.\n"
             "INSUFFICIENT: SOURCE does not establish the entire CLAIM.\n"
+            "CONTRADICTED requires an explicit conflict in SOURCE.\n"
+            "If SOURCE does not mention a claimed date, location, person, or event, classify as INSUFFICIENT, not CONTRADICTED.\n"
+            "Absence of evidence is not evidence of contradiction.\n"
             "Use only SOURCE. Do not use outside knowledge.\n"
             "A true claim with the wrong citation is INSUFFICIENT.\n"
             "Pay attention to negation, must, may, and optional.\n"
@@ -100,6 +104,35 @@ class CitationEntailmentValidator:
 
         if verdict not in self.VERDICTS:
             raise ValueError("Invalid entailment verdict")
+
+        # A missing date or named location cannot, by itself,
+        # establish an explicit contradiction.
+        if verdict == "CONTRADICTED":
+            source_lower = source_text.casefold()
+
+            years = re.findall(
+                r"(?<!\d)(?:18|19|20|21)\d{2}(?!\d)",
+                fact,
+            )
+
+            has_unmentioned_year = any(
+                year not in source_text
+                for year in years
+            )
+
+            proper_place_candidates = re.findall(
+                r"\b(?:in|at|from|near|within)\s+"
+                r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)",
+                fact,
+            )
+
+            has_unmentioned_place = any(
+                place.casefold() not in source_lower
+                for place in proper_place_candidates
+            )
+
+            if has_unmentioned_year or has_unmentioned_place:
+                verdict = "INSUFFICIENT"
 
         return {
             "verdict": verdict,

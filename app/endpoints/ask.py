@@ -9,6 +9,7 @@ from app.models import Document
 from app.services.structured_rag_service import StructuredRAGService
 from app.services.citation_entailment_validator import CitationEntailmentValidator
 from app.services.question_relevance_guard import QuestionRelevanceGuard
+from app.services.question_fact_consistency_guard import QuestionFactConsistencyGuard
 
 
 ask_bp = Blueprint("ask", __name__, url_prefix="/api/ask")
@@ -84,6 +85,8 @@ def ask_pdf():
                 model="qwen2.5:3b",
             ),
         )
+
+        service.consistency_guard = QuestionFactConsistencyGuard()
 
         result = service.ask(
             question=question,

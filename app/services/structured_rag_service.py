@@ -454,8 +454,26 @@ class StructuredRAGService:
 
 
 
-        items = result["items"]
+        # Retry failed English negated yes/no questions.
+        if (
+            not result["items"]
+            and re.match(r"^\s*(?:does|do|did)\b", question, re.I)
+            and re.search(r"\b(?:not|never|no)\b|n't\b", question, re.I)
+        ):
+            retry_question = (
+                "Evaluate this claim using the document: "
+                + question.strip()
+                + " Does the evidence support or contradict this claim? "
+                + "Explain using the document and cite the evidence."
+            )
+            retry_result = self.llm.generate(
+                question=retry_question,
+                chunks=chunks,
+            )
+            if retry_result["items"]:
+                result = retry_result
 
+        items = result["items"]
         rejected_count = 0
 
 
@@ -550,7 +568,7 @@ class StructuredRAGService:
 
                 relevance_result = self.relevance_guard.evaluate(
 
-                    question=question,
+                    question=search_question,
 
                     fact=item["fact"],
 
@@ -569,6 +587,25 @@ class StructuredRAGService:
 
 
             items = relevant_items
+
+        consistency_guard = getattr(
+            self, "consistency_guard", None
+        )
+
+        if consistency_guard is not None:
+            consistent_items = []
+
+            for item in items:
+                consistency_result = consistency_guard.evaluate(
+                    question=question,
+                    fact=item["fact"],
+                )
+
+                if consistency_result["verdict"] != "REJECT":
+                    consistent_items.append(item)
+
+            items = consistent_items
+
 
 
 
